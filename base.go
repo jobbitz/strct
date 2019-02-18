@@ -28,16 +28,19 @@ import (
 	"time"
 )
 
+// ErrNoPtr gets thrown if the inserted object is not a pointer or a struct type
+var ErrNoPtr = fmt.Errorf(`insert is not a pointer or a struct`)
+
 // Scan scans each structs attribute
 func Scan(obj interface{}, action func(reflect.StructField, *reflect.Value) error) error {
 	rv := reflect.ValueOf(obj)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
-		return fmt.Errorf(`insert is not a pointer`)
+		return ErrNoPtr
 	}
 
 	rv = rv.Elem()
 	if rv.Kind() != reflect.Struct {
-		return fmt.Errorf(`insert is not a pointer`)
+		return ErrNoPtr
 	}
 
 	t := rv.Type()
