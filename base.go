@@ -3,6 +3,12 @@
 /*
 Package strct a simplified golang reflect package
 
+The struct package takes the complexety of golang reflecs away by giving you 2 functions to work with: the scanner and the parser.
+The scanner takes the object that needs to be scanned and a function that goes over each type property of the struct of the given object.
+The scanner function has 2 parameters: the reflect.Structfield which contains the data such as the property name and the property tags and contains a pointer to the reflect.Value which you than can either interface with or set a new value of.
+
+You can easaly set a new value using the Parser the parser takes the value that needs to be set as string (because its univerably accessable) and the reflect.Value pointer that needs to be set.
+
 Usage
 
 Get the values you need using the scanner
@@ -13,7 +19,7 @@ Get the values you need using the scanner
 				return nil
 			}
 
-			setValue(value, os.GetEnv(tagval))
+			strct.Parse(os.GetEnv(tagval), value)
 		})
 	}
 
@@ -32,7 +38,7 @@ import (
 var ErrNoPtr = fmt.Errorf(`insert is not a pointer or a struct`)
 
 // Scan scans each structs attribute
-func Scan(obj interface{}, action func(reflect.StructField, *reflect.Value) error) error {
+func Scan(obj interface{}, action func(reflect.StructField, *reflect.Value) error) error { // nolint: gocyclo
 	rv := reflect.ValueOf(obj)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return ErrNoPtr
@@ -77,8 +83,17 @@ func Scan(obj interface{}, action func(reflect.StructField, *reflect.Value) erro
 	return nil
 }
 
-// Parse sets a string value to the given value
+// Parse sets a string as value to the the reflected value
 func Parse(val string, fv *reflect.Value) error {
+	currVal := fmt.Sprint(fv.Interface())
+	if !(currVal == `false` || currVal == `0` || currVal == `[]` || currVal == ``) {
+		return nil
+	}
+	return ParseHard(val, fv)
+}
+
+// ParseHard sets a string as value to the given value and overides previous values
+func ParseHard(val string, fv *reflect.Value) error { // nolint: gocyclo
 	if val == `` {
 		return nil
 	}
