@@ -37,8 +37,13 @@ import (
 // ErrNoPtr gets thrown if the inserted object is not a pointer or a struct type
 var ErrNoPtr = fmt.Errorf(`insert is not a pointer or a struct`)
 
-// Scan scans each structs attribute
-func Scan(obj interface{}, action func(reflect.StructField, *reflect.Value) error) error { // nolint: gocyclo
+// Scan scans the properties of the given object struct
+func Scan(obj interface{}, onProperty func(reflect.StructField, *reflect.Value) error) error {
+	return ScanAll(obj, func(f reflect.StructField) error { return nil }, onProperty)
+}
+
+// ScanAll scans each structs attribute
+func ScanAll(obj interface{}, onStruct func(reflect.StructField) error, onProperty func(reflect.StructField, *reflect.Value) error) error { // nolint: gocyclo
 	rv := reflect.ValueOf(obj)
 	if rv.Kind() != reflect.Ptr || rv.IsNil() {
 		return ErrNoPtr
@@ -66,7 +71,11 @@ func Scan(obj interface{}, action func(reflect.StructField, *reflect.Value) erro
 				continue
 			}
 
-			if err := Scan(f.Addr().Interface(), action); err != nil {
+			if err := onStruct(t.Field(i)); err != nil {
+				return err
+			}
+
+			if err := ScanAll(f.Addr().Interface(), onStruct, onProperty); err != nil {
 				return err
 			}
 		}
@@ -75,7 +84,7 @@ func Scan(obj interface{}, action func(reflect.StructField, *reflect.Value) erro
 			continue
 		}
 
-		if err := action(t.Field(i), &f); err != nil {
+		if err := onProperty(t.Field(i), &f); err != nil {
 			return err
 		}
 
