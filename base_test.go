@@ -3,20 +3,23 @@
 package strct
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"reflect"
 	"testing"
 )
 
 type testObj struct {
 	Empty              int
-	Str                string  `default:"test"`
-	shouldNotRead      string  `default:"SHOULDNOTREAD"`
-	ShouldNotOverWrite string  `default:"override"`
-	Bool               bool    `default:"true"`
-	Flt                float64 `default:"4.5"`
-	Int                int     `default:"4"`
-	Sli                []int   `default:"1;2;3"`
+	Str                string    `default:"test"`
+	shouldNotRead      string    `default:"SHOULDNOTREAD"`
+	ShouldNotOverWrite string    `default:"override"`
+	Bool               bool      `default:"true"`
+	Flt                float64   `default:"4.5"`
+	Int                int       `default:"4"`
+	Sli                []int     `default:"1;2;3"`
+	File               io.Reader `default:"./base.go"`
 }
 
 func TestScanAndParse(t *testing.T) {
@@ -46,6 +49,19 @@ func TestScanAndParse(t *testing.T) {
 	eq(4.5, obj.Flt, t)
 	eq(4, obj.Int, t)
 	eq([]int{1, 2, 3}, obj.Sli, t)
+
+	if obj.File == nil {
+		t.Error(`file not parsed`)
+	}
+	buf := new(bytes.Buffer)
+	if _, err := buf.ReadFrom(obj.File); err != nil {
+		t.Error(err)
+	}
+
+	if buf.String() == `` {
+		t.Error(`file should not be empty`)
+	}
+
 }
 
 func eq(expected, actual interface{}, t *testing.T) {

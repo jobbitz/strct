@@ -28,6 +28,8 @@ package strct
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -59,10 +61,6 @@ func ScanAll(obj interface{}, onStruct func(reflect.StructField) error, onProper
 		f := rv.Field(i)
 		switch f.Kind() {
 		case reflect.Ptr:
-			if f.Elem().Kind() != reflect.Struct {
-				break
-			}
-
 			f = f.Elem()
 			fallthrough
 
@@ -95,10 +93,13 @@ func ScanAll(obj interface{}, onStruct func(reflect.StructField) error, onProper
 // Parse sets a string as value to the the reflected value
 func Parse(val string, fv *reflect.Value) error {
 	currVal := fmt.Sprint(fv.Interface())
-	if !(currVal == `false` || currVal == `0` || currVal == `[]` || currVal == ``) {
+	fmt.Println(currVal)
+	switch currVal {
+	case `false`, `0`, `[]`, ``, `<nil>`:
+		return ParseHard(val, fv)
+	default:
 		return nil
 	}
-	return ParseHard(val, fv)
 }
 
 // ParseHard sets a string as value to the given value and overides previous values
@@ -158,6 +159,21 @@ func ParseHard(val string, fv *reflect.Value) error { // nolint: gocyclo
 			}
 		}
 		fv.Set(slice)
+
+	case reflect.Interface:
+		switch fv.Type() {
+		case reflect.TypeOf((*io.Reader)(nil)).Elem(),
+			reflect.TypeOf((*io.Writer)(nil)).Elem(),
+			reflect.TypeOf((*io.ReadWriter)(nil)).Elem(),
+			reflect.TypeOf((*io.ReadCloser)(nil)).Elem(),
+			reflect.TypeOf((*io.WriteCloser)(nil)).Elem(),
+			reflect.TypeOf((*io.ReadWriteCloser)(nil)).Elem():
+			file, err := os.Open(val)
+			if err != nil {
+				return err
+			}
+			fv.Set(reflect.ValueOf(file))
+		}
 	}
 	return nil
 }
