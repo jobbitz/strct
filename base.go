@@ -1,29 +1,27 @@
 // Copyright 2019 Job Stoit. All rights reserved.
 
-/*
-Package strct a simplified golang reflect package
-
-The struct package takes the complexety of golang reflecs away by giving you 2 functions to work with: the scanner and the parser.
-The scanner takes the object that needs to be scanned and a function that goes over each type property of the struct of the given object.
-The scanner function has 2 parameters: the reflect.Structfield which contains the data such as the property name and the property tags and contains a pointer to the reflect.Value which you than can either interface with or set a new value of.
-
-You can easaly set a new value using the Parser the parser takes the value that needs to be set as string (because its univerably accessable) and the reflect.Value pointer that needs to be set.
-
-Usage
-
-Get the values you need using the scanner
-	func TagEnvParser(obj interface{}, parsevalue string) error {
-		return strct.Scan(obj, func(field reflect.StructField, value *reflect.Value) error {
-			tagVal := field.Tag.Get(`env`)
-			if tagVal == `` {
-				return nil
-			}
-
-			strct.Parse(os.GetEnv(tagval), value)
-		})
-	}
-
-*/
+// Package strct a simplified golang reflect package
+//
+// The struct package takes the complexety of golang reflecs away by giving you 2 functions to work with: the scanner and the parser.
+// The scanner takes the object that needs to be scanned and a function that goes over each type property of the struct of the given object.
+// The scanner function has 2 parameters: the reflect.Structfield which contains the data such as the property name and the property tags and contains a pointer to the reflect.Value which you than can either interface with or set a new value of.
+//
+// You can easaly set a new value using the Parser the parser takes the value that needs to be set as string (because its univerably accessable) and the reflect.Value pointer that needs to be set.
+//
+// Usage
+//
+// Get the values you need using the scanner
+// 	func TagEnvParser(obj interface{}, parsevalue string) error {
+// 		return strct.Scan(obj, func(field reflect.StructField, value *reflect.Value) error {
+// 			tagVal := field.Tag.Get(`env`)
+// 			if tagVal == `` {
+// 				return nil
+// 			}
+//
+// 			strct.Parse(os.GetEnv(tagval), value)
+// 		})
+// 	}
+//
 package strct
 
 import (
@@ -61,6 +59,10 @@ func ScanAll(obj interface{}, onStruct func(reflect.StructField) error, onProper
 		f := rv.Field(i)
 		switch f.Kind() {
 		case reflect.Ptr:
+			if f.Elem().Kind() != reflect.Struct {
+				break
+			}
+
 			f = f.Elem()
 			fallthrough
 
@@ -76,6 +78,7 @@ func ScanAll(obj interface{}, onStruct func(reflect.StructField) error, onProper
 			if err := ScanAll(f.Addr().Interface(), onStruct, onProperty); err != nil {
 				return err
 			}
+
 		}
 
 		if !f.CanSet() {
@@ -93,7 +96,6 @@ func ScanAll(obj interface{}, onStruct func(reflect.StructField) error, onProper
 // Parse sets a string as value to the the reflected value
 func Parse(val string, fv *reflect.Value) error {
 	currVal := fmt.Sprint(fv.Interface())
-	fmt.Println(currVal)
 	switch currVal {
 	case `false`, `0`, `[]`, ``, `<nil>`:
 		return ParseHard(val, fv)
@@ -160,9 +162,10 @@ func ParseHard(val string, fv *reflect.Value) error { // nolint: gocyclo
 		}
 		fv.Set(slice)
 
-	case reflect.Interface:
+	case reflect.Interface, reflect.Ptr:
 		switch fv.Type() {
-		case reflect.TypeOf((*io.Reader)(nil)).Elem(),
+		case reflect.TypeOf(new(os.File)),
+			reflect.TypeOf((*io.Reader)(nil)).Elem(),
 			reflect.TypeOf((*io.Writer)(nil)).Elem(),
 			reflect.TypeOf((*io.ReadWriter)(nil)).Elem(),
 			reflect.TypeOf((*io.ReadCloser)(nil)).Elem(),

@@ -5,21 +5,21 @@ package strct
 import (
 	"bytes"
 	"fmt"
-	"io"
+	"os"
 	"reflect"
 	"testing"
 )
 
 type testObj struct {
 	Empty              int
-	Str                string    `default:"test"`
-	shouldNotRead      string    `default:"SHOULDNOTREAD"`
-	ShouldNotOverWrite string    `default:"override"`
-	Bool               bool      `default:"true"`
-	Flt                float64   `default:"4.5"`
-	Int                int       `default:"4"`
-	Sli                []int     `default:"1;2;3"`
-	File               io.Reader `default:"./base.go"`
+	Str                string   `default:"test"`
+	shouldNotRead      string   `default:"SHOULDNOTREAD"`
+	ShouldNotOverWrite string   `default:"override"`
+	Bool               bool     `default:"true"`
+	Flt                float64  `default:"4.5"`
+	Int                int      `default:"4"`
+	Sli                []int    `default:"1;2;3"`
+	File               *os.File `default:"./base.go"`
 }
 
 func TestScanAndParse(t *testing.T) {
