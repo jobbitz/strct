@@ -22,13 +22,20 @@
 // 		})
 // 	}
 //
+// The parser even adds any file in attributes like *os.File or io.Reader, io.Writer, etc.
+//
+// Also the parser can even parse a database connection onto any *sql.DB using driver/connectionstring as value where if the driver is not specified
+// it will use 'postgres' as default.
+//
 package strct
 
 import (
+	"database/sql"
 	"fmt"
 	"io"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -95,8 +102,7 @@ func ScanAll(obj interface{}, onStruct func(reflect.StructField) error, onProper
 
 // Parse sets a string as value to the the reflected value
 func Parse(val string, fv *reflect.Value) error {
-	currVal := fmt.Sprint(fv.Interface())
-	switch currVal {
+	switch fmt.Sprint(fv.Interface()) {
 	case `false`, `0`, `[]`, ``, `<nil>`:
 		return ParseHard(val, fv)
 	default:
@@ -176,6 +182,20 @@ func ParseHard(val string, fv *reflect.Value) error { // nolint: gocyclo
 				return err
 			}
 			fv.Set(reflect.ValueOf(file))
+		case reflect.TypeOf(new(sql.DB)):
+			m := regexp.MustCompile(`((\w+)\/)?([\w\W\d]+)`).FindStringSubmatch(val)
+			dvr := m[2]
+			cs := m[3]
+
+			if dvr == `` {
+				dvr = `postgres`
+			}
+
+			db, err := sql.Open(dvr, cs)
+			if err != nil {
+				return err
+			}
+			fv.Set(reflect.ValueOf(db))
 		}
 	}
 	return nil
